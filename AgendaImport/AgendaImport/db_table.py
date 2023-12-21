@@ -26,9 +26,23 @@ class db_table:
     # Example: table("users", { "id": "integer PRIMARY KEY", "name": "text" })
     #
     def __init__(self, name, schema):
+        # Note: i changed the implementation of the constructor to handle when we have
+        # created a db object using import but won't know the schema and want to 
+        # extract the schema from that db object
         # error handling
         if not name:
             raise RuntimeError("invalid table name")
+        if schema is None:
+            self.name = name
+            self.db_conn = sqlite3.connect(self.DB_NAME)
+            cursor = self.db_conn.cursor()
+            res = cursor.execute("PRAGMA table_info(" + self.name + ");")
+            self.schema = dict()
+            for row in res.fetchall():
+                self.schema.update({row[1] : row[2]})
+            cursor.close()
+            return
+        
         if not schema:
             raise RuntimeError("invalid database schema")
 
@@ -48,7 +62,7 @@ class db_table:
     #
     def create_table(self):
         # { "id": "integer", "name": "text" } -> "id integer, name text"
-        columns_query_string = ', '.join([ "%s %s" % (k,v) for k,v in self.schema.iteritems() ])
+        columns_query_string = ', '.join([ "%s %s" % (k,v) for k,v in self.schema.items() ])
 
         # CREATE TABLE IF NOT EXISTS users (id integer PRIMARY KEY, name text)
         #
@@ -75,13 +89,14 @@ class db_table:
         # by default, query all columns
         if not columns:
             columns = [ k for k in self.schema ]
-
-        # build query string
-        columns_query_string = ", ".join(columns)
+            columns_query_string = "*"
+        else:
+            # build query string
+            columns_query_string = ", ".join(columns)
         query                = "SELECT %s FROM %s" % (columns_query_string, self.name)
         # build where query string
         if where:
-            where_query_string = [ "%s = '%s'" % (k,v) for k,v in where.iteritems() ]
+            where_query_string = [ "%s = '%s'" % (k,v) for k,v in where.items() ]
             query             += " WHERE " + ' AND '.join(where_query_string)
         
         result = []
@@ -90,6 +105,7 @@ class db_table:
         # Note that columns are formatted into the string without using sqlite safe substitution mechanism
         # The reason is that sqlite does not provide substitution mechanism for columns parameters
         # In the context of this project, this is fine (no risk of user malicious input)
+        # query = "SELECT * FROM agenda WHERE Time_End = [11:50AM]"
         for row in self.db_conn.execute(query):
             result_row = {}
             # convert from (val1, val2, val3) to { col1: val1, col2: val2, col3: val3 }
@@ -99,6 +115,20 @@ class db_table:
 
         return result
 
+    def selectIn(self, column, value):
+        # We will query all columns
+        # query = "SELECT * FROM " + self.name + " WHERE CHARINDEX(\'" + value + "\', " + column + ") > 0"
+        query = "SELECT * FROM " + self.name + " WHERE " + column + " LIKE \'%" + value + "%\'"
+        result = []
+        columns = [ k for k in self.schema ]
+        for row in self.db_conn.execute(query):
+            result_row = {}
+            # convert from (val1, val2, val3) to { col1: val1, col2: val2, col3: val3 }
+            for i in range(0, len(columns)):
+                result_row[columns[i]] = row[i]
+            result.append(result_row)
+
+        return result
     #
     # INSERT INTO wrapper
     # insert the given item into database
@@ -113,8 +143,6 @@ class db_table:
         # build columns & values queries
         columns_query = ", ".join(item.keys())
         values_query  = ", ".join([ "'%s'" % v for v in item.values()])
-        #print(len(item.values()))
-        #print(item["Speakers"])
         # INSERT INTO users(id, name) values (42, John)
         #
         # Note that columns are formatted into the string without using sqlite safe substitution mechanism
