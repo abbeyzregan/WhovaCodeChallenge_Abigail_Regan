@@ -44,12 +44,14 @@ for index, row in file.iterrows():
             if isinstance(val, str):
                 val = '[' + val + ']'
                 val = val.replace('\'', '\'\'')
+                print(val)
             row_dict.update({col: val})
-    if '[Session]' == row_dict.get("[Session_or_\nSub-session(Sub)]"):
-        last_title = row_dict.get("[Session_or_\nSub-session(Sub)]")
+    if '[Session]' == row_dict.get("[session_or_\nsub-session(sub)]"):
+        last_title = row_dict.get("[session_title]")
+        last_title.replace('\'', '\'\'')
     else:
-        val = "Subsession of " + last_title 
-        row_dict.update({"[Session_or_\nSub-session(Sub)]": val})
+        val = "[Subsession of " + last_title + "]"
+        row_dict.update({"[session_or_\nsub-session(sub)]": val})
     table.insert(row_dict)
 
 # We are done for now, close the database connection

@@ -1,7 +1,8 @@
 # This file allows the user to perform a lookup of the table that was created
 # by import_agenda.py. This call assumes that the interview_test.db object
 # was created and can be used accordingly for the function. 
-# value is case sensitive but column is not
+# value is case sensitive but column is not, and we assume that the title
+# will have an underscore in it. 
 import sys
 from db_table import db_table
 
@@ -40,14 +41,19 @@ final_list = []
 for row in initial_look:
     final_list.append(row)
     # Search for the matching subssessions and append them to the final_list
-    subsessions = table.selectIn('[session_or_\nsub-session(sub)]', row.get('session_title'))
+    title = row.get('session_title').replace('\'', '\'\'')
+    print(title)
+    subsessions = table.selectIn('[session_or_\nsub-session(sub)]', title)
     if (len(subsessions) != 0):
         final_list.append(subsessions)
     
-
+print(final_list)
 # Remove double '' and exterior brackets and print to console
 for row in final_list:
     output = ""
-    for col in column_name:
-        output += row.get(col) + "       "
-    print(output + "\n")
+    if isinstance(row, list):
+        print(row)
+    elif isinstance(row, dict):
+        for col in column_name:
+            output += str(row.get(col)) + "       "
+        print(output + "\n")
