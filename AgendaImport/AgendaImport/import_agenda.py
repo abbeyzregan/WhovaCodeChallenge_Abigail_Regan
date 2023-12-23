@@ -44,7 +44,6 @@ for index, row in file.iterrows():
             if isinstance(val, str):
                 val = '[' + val + ']'
                 val = val.replace('\'', '\'\'')
-                print(val)
             row_dict.update({col: val})
     if '[Session]' == row_dict.get("[session_or_\nsub-session(sub)]"):
         last_title = row_dict.get("[session_title]")

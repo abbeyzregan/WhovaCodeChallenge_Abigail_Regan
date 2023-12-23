@@ -42,12 +42,10 @@ for row in initial_look:
     final_list.append(row)
     # Search for the matching subssessions and append them to the final_list
     title = row.get('session_title').replace('\'', '\'\'')
-    print(title)
     subsessions = table.selectIn('[session_or_\nsub-session(sub)]', title)
     if (len(subsessions) != 0):
         final_list.append(subsessions)
     
-print(final_list)
 # Remove double '' and exterior brackets and print to console
 for row in final_list:
     output = ""
